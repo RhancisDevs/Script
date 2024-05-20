@@ -1,0 +1,141 @@
+{
+    "invite_code": "664a27587833216defe862ed",
+    "timeInterval": 3000,
+    "times": 2const axios = require('axios');
+const fs = require('fs');
+
+// Read the configuration from config.json
+const config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+
+function generateRandomString(length) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+function generateRandomNumericString(length) {
+  const numbers = '0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+  return result;
+}
+
+async function registerUser() {
+  const randomPassword = generateRandomString(8);
+  const randomNumericString = generateRandomNumericString(9);
+  try {
+    const response = await axios.post(
+      'https://api.babe7788.co/gw/login/register',
+      {
+        'invite_code': config.invite_code,
+        'agreeOnPromos': true,
+        'password': randomPassword,
+        'agreeOnState': true,
+        'account_value': '+63|9' + randomNumericString,
+        'account_type': 1,
+        'flow_id': '',
+        'extra': {
+          'from': 'act_raffle'
+        }
+      },
+      {
+        headers: {
+          'authority': 'api.babe7788.co',
+          'accept-language': 'en-PH,en;q=0.9,fil-PH;q=0.8,fil;q=0.7,en-US;q=0.6',
+          'authorization': ';',
+          'origin': 'https://babe7788.co',
+          'referer': 'https://babe7788.co/',
+          'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="83"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"macOS"',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'u-devicetype': 'mac_web',
+          'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36'
+        }
+      }
+    );
+
+    const data = {
+      userid: response.data.data.user_id,
+      token: response.data.data.token,
+      number: '+63|9' + randomNumericString,
+      password: randomPassword,
+    };
+    console.log('Successful invite:', data);
+    return data;
+  } catch (error) {
+    console.error('Error:', error.response.data);
+    return null;
+  }
+}
+
+async function rechargelink(userid, token) {
+  try {
+    const response = await axios.post(
+      'https://api.babe7788.co/user/recharge',
+      {
+        'user_id': userid,
+        'token': token,
+        'currency': 'PHP',
+        'amount': '100',
+        'task_id': '1',
+        'device': 'mac_web',
+        'data': {
+          'typ': 'GCASHORIGIN',
+          'pay_method': 'electronic_wallet'
+        }
+      },
+      {
+        headers: {
+          'authority': 'api.babe7788.co',
+          'accept-language': 'en-PH,en;q=0.9,fil-PH;q=0.8,fil;q=0.7,en-US;q=0.6',
+          'authorization': `${userid};${token}`,
+          'origin': 'https://babe7788.co',
+          'referer': 'https://babe7788.co/',
+          'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="83"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"macOS"',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'u-devicetype': 'mac_web',
+          'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36'
+        }
+      }
+    );
+
+    const r = {
+      payment_url: response.data.data.pay_method.cashier,
+      orderid: response.data.data.order_id,
+    }
+    console.log('Recharge link response:', r);
+    return r;
+  } catch (error) {
+    console.error('Error:', error.response.data);
+    return null;
+  }
+}
+
+let intervalCount = 0;
+const interval = setInterval(async () => {
+  if (intervalCount >= config.times) {
+    clearInterval(interval);
+    console.log(`Completed the Invite loop.`);
+    return;
+  }
+  intervalCount++;
+
+  const userData = await registerUser();
+
+  if (userData) {
+    await rechargelink(userData.userid, userData.token);
+  }
+}, config.timeInterval);
+}
